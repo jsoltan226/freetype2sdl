@@ -51,7 +51,6 @@ int main(int argc, char **argv)
     assert(font != NULL);
 
     int time = 0;
-    bool UWU = false;
     bool running = true;
     bool keyI = false, keyD = false;
     while(running){
@@ -79,8 +78,6 @@ int main(int argc, char **argv)
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
         fnt_setTextColor(font, 128, 128, time/25 % 255, 255);
-        if(time % 50 == 0)
-            UWU = !UWU;
         if(time % 100){
             if(keyI)
                 font->lineHeight++;
@@ -88,10 +85,7 @@ int main(int argc, char **argv)
                 font->lineHeight--;
         }
 
-        if(UWU || 1)
-            fnt_drawText(font, renderer, 0, 0, "UWU\n12\t4,+_");
-        else
-            fnt_drawText(font, renderer, 0, 0, "%i", time / 50 / 2);
+        fnt_drawText(font, renderer, 0, 0, "Test\n12\t4,+_");
 
         fnt_setTextColor(font, (int)((time + 100)*0.8) % 255, time % 100, time %255, time %10 + 200);
         fnt_drawText(font, renderer, 200, 330, "TEST");
