@@ -1,0 +1,3 @@
+Added a .gitignore
+Made the displayed text more... appropriate
+Made the fonts load from a local direcotry, rather than from somewhere in the system

@@ -13,9 +13,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SOURCE_CODE_PRO "/usr/share/fonts/adobe-source-code-pro/SourceCodePro-Regular.otf"
-#define LIBERATION_MONO "/usr/share/fonts/liberation/LiberationMono-Regular.ttf" 
-#define FREE_SANS       "/usr/share/fonts/gnu-free/FreeSansBold.otf"
+#define SOURCE_CODE_PRO "assets/SourceCodePro-Regular.otf"
+#define LIBERATION_MONO "assets/LiberationMono-Regular.ttf" 
+#define FREE_SANS       "assets/FreeSansBold.otf"
 
 #define M_SQRT2	1.41421356237309504880	/* sqrt(2) */
 char FONT_PATH[FNT_TEXT_BUFFER_SIZE];
