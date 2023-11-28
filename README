@@ -1,0 +1,5 @@
+This program (or rather module) gives the ability to load and parse a TTF font with the `fnt_initFont` function,
+and then then use it to draw text to an SDL2 SDL_Renderer using `fnt_drawText`.
+See the fonts.h header file for more detailed explanations.
+
+This mini-subproject was originally supposed to just be a small part of my 'cgd' project, added in a single commit, however it proved to be so difficult to implement that I created a separate repo for it to make it easier to work on.
