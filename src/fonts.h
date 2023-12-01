@@ -12,7 +12,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-#define FNT_ASCII_FIRST_VISIBLE_CHAR        32
+#define FNT_ASCII_FIRST_VISIBLE_CHAR        (((int)' ') + 1)
 #define FNT_ASCII_LAST_VISIBLE_CHAR         127
 #define FNT_ASCII_TOTAL_VISIBLE_CHARS       (FNT_ASCII_LAST_VISIBLE_CHAR - FNT_ASCII_FIRST_VISIBLE_CHAR + 1)
 
@@ -28,7 +28,7 @@ typedef enum {
 typedef struct {
     SDL_Rect srcRect;
     float offsetX, offsetY;
-    float widthRatio, heightRatio;
+    float scaleX, scaleY;
 } fnt_GlyphData;
 
 typedef struct {

@@ -1,4 +1,7 @@
 #include "fonts.h"
+#include "freetype/freetype.h"
+#include <SDL2/SDL_render.h>
+#include <stdlib.h>
 
 int max(int a, int b)
 {
@@ -68,7 +71,7 @@ fnt_Font *fnt_initFont(const char *filePath, SDL_Renderer *renderer, float charW
         errCode = ERR_INIT_FT_FACE;
         goto err;
     };
-    FreeType_errCode = FT_Set_Pixel_Sizes(face, 0, lineHeight * M_SQRT2);
+    FreeType_errCode = FT_Set_Pixel_Sizes(face, 0, lineHeight);
     if(FreeType_errCode){
         errCode = ERR_FT_SET_PIXEL_SIZES;
         goto err;
@@ -98,7 +101,7 @@ fnt_Font *fnt_initFont(const char *filePath, SDL_Renderer *renderer, float charW
     newFont->visibleChars.last = lastVisibleChar;
     newFont->visibleChars.total = totalVisibleChars;
 
-    newFont->glyphs = malloc(sizeof(fnt_GlyphData) * totalVisibleChars);
+    newFont->glyphs = calloc(totalVisibleChars, sizeof(fnt_GlyphData));
     if(newFont->glyphs == NULL){
         errCode = ERR_ALLOC_FNT_GLYPHS;
         goto err;
@@ -132,6 +135,19 @@ fnt_Font *fnt_initFont(const char *filePath, SDL_Renderer *renderer, float charW
         /* For some reason FreeType uses 1/64th of a pixel as its metrics unit,
          * so to obtain our wanted result we multiply everything by 64 (shift 6 bits to the right)
          */
+
+        FT_Glyph_Metrics *m = &glyphSlot->metrics;
+        if(m->horiAdvance != 0)
+            currentGlyph->scaleX = (float)m->width / m->horiAdvance;
+
+        if(lineHeight != 0)
+            currentGlyph->scaleY = (float)m->height / (float)((int)lineHeight << 6);
+
+        if(m->width != 0)
+            currentGlyph->offsetX = ((m->horiBearingX / m->width) >> 6) * currentGlyph->scaleX;
+
+        if(m->height != 0)
+            currentGlyph->offsetY = (((m->height - m->horiBearingY) / m->height) >> 6) * currentGlyph->scaleY;
 
         /* The font's texture will be a long (horizontal) line
          * with all the character placed one after the other,
@@ -320,15 +336,17 @@ void fnt_drawText(fnt_Font *fnt, SDL_Renderer *renderer, float baselineX, float 
             default:
                 i = (int)(*c_ptr) - fnt->visibleChars.first;
                 if(i < fnt->visibleChars.total && i >= 0){
-                    //fnt_GlyphData *currentGlyph = &fnt->glyphs[i];
+                    fnt_GlyphData *currentGlyph = &fnt->glyphs[i];
 
                     SDL_Rect destRect = { 
-                        .x = baselineX + penX,
-                        .y = baselineY + penY,
-                        .w = (int)(fnt->charW),
-                        .h = (int)(fnt->lineHeight),
+                        .x = baselineX + penX + (currentGlyph->offsetX * fnt->charW),
+                        .y = baselineY + penY + (currentGlyph->offsetY * fnt->lineHeight),
+                        .w = (int)(fnt->charW * currentGlyph->scaleX),
+                        .h = (int)(fnt->lineHeight * currentGlyph->scaleY),
                     };
                     SDL_RenderCopy(renderer, fnt->texture, &fnt->glyphs[i].srcRect, &destRect);
+                    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+                    SDL_RenderDrawRect(renderer, &destRect);
                     penX += fnt->charW;
                 }
                 break;
@@ -340,7 +358,8 @@ void fnt_drawText(fnt_Font *fnt, SDL_Renderer *renderer, float baselineX, float 
                 break;
             case '\t':
                 /* Advance to the next multiple of tabWidth (times the character width) */
-                penX += (fnt->tabWidth -((int)(penX / fnt->charW) % fnt->tabWidth)) * fnt->charW;
+                if(fnt->charW != 0)
+                    penX += (fnt->tabWidth -((int)(penX / fnt->charW) % fnt->tabWidth)) * fnt->charW;
                 break;
             case '\n': case '\v' /* Vertical tab */:
                 penX = 0;
