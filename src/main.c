@@ -13,6 +13,25 @@
 #include <stdio.h>
 #include <string.h>
 
+#define WINDOW_TITLE    "FreeType 2 SDL"
+#define WINDOW_X        SDL_WINDOWPOS_CENTERED
+#define WINDOW_Y        SDL_WINDOWPOS_CENTERED
+#define WINDOW_WIDTH    500
+#define WINDOW_HEIGHT   500
+#define WINDOW_FLAGS    SDL_WINDOW_OPENGL
+
+#define RENDERER_FLAGS  (SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_TARGETTEXTURE)
+
+#define LINE_HEIGHT     100.f
+#define CHAR_W          50.f
+
+#define TEXT1           "Test\n12\t4,+_"
+#define TEXT1_X         0
+#define TEXT1_Y         0
+#define TEXT2           "TEST"
+#define TEXT2_X         200
+#define TEXT2_Y         330
+
 #define SOURCE_CODE_PRO "assets/SourceCodePro-Regular.otf"
 #define LIBERATION_MONO "assets/LiberationMono-Regular.ttf" 
 #define FREE_SANS       "assets/FreeSansBold.otf"
@@ -40,19 +59,52 @@ int main(int argc, char **argv)
 
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window *window = SDL_CreateWindow(
-            "font test", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 500, 500, SDL_WINDOW_OPENGL
-        );
-    SDL_Renderer *renderer = SDL_CreateRenderer(
-            window, 0, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE
-        );
+        WINDOW_TITLE, WINDOW_X, WINDOW_Y, WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_FLAGS
+    );
+    SDL_Renderer *renderer = SDL_CreateRenderer(window, 0, RENDERER_FLAGS);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    fnt_Font *font = fnt_initFont(FONT_PATH, renderer, 50.f, 100.f, FNT_CHARSET_ASCII);
+    fnt_Font *font = fnt_initFont(FONT_PATH, renderer, CHAR_W, LINE_HEIGHT, FNT_CHARSET_ASCII);
     assert(font != NULL);
 
     int time = 0;
     bool running = true;
     bool keyI = false, keyD = false;
+
+    int newlinesText1 = 0, newlinesText2 = 0, strWText1 = 0, strWText2 = 0;
+    char *text1 = TEXT1;
+    char *text2 = TEXT2;
+
+    int currentTextW = 0;
+    int i = 0;
+    while(text1[i]){
+        i++;
+        currentTextW++;
+        if(text1[i] == '\n'){
+            newlinesText1++;
+            strWText1 = currentTextW > strWText1 ? currentTextW : strWText1;
+            currentTextW = 0;
+        } else if(text1[i] == '\t'){
+            currentTextW += i - (i % FNT_DEFAULT_TAB_WIDTH);
+        }
+    }
+    strWText1 = currentTextW > strWText1 ? currentTextW : strWText1;
+
+    currentTextW = 0;
+    i = 0;
+    while(text2[i]){
+        i++;
+        currentTextW++;
+        if(text2[i] == '\n'){
+            newlinesText2++;
+            strWText2 = currentTextW > strWText2 ? currentTextW : strWText2;
+            currentTextW = 0;
+        } else if(text2[i] == '\t'){
+            currentTextW += i - (i % FNT_DEFAULT_TAB_WIDTH);
+        }
+    }
+    strWText2 = currentTextW > strWText2 ? currentTextW : strWText2;
+
     while(running){
         SDL_Event event;
 
@@ -85,10 +137,25 @@ int main(int argc, char **argv)
                 font->lineHeight--;
         }
 
-        fnt_drawText(font, renderer, 0, 0, "Test\n12\t4,+_");
+        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+        SDL_Rect destRect = {
+            .x = TEXT1_X,
+            .y = TEXT1_Y,
+            .w = strWText1 * CHAR_W,
+            .h = LINE_HEIGHT * (newlinesText1 + 1),
+        };
+        fnt_drawText(font, renderer, TEXT1_X, TEXT1_Y, TEXT1);
+        SDL_RenderDrawRect(renderer, &destRect);
 
+        destRect = (SDL_Rect){
+            .x = TEXT2_X,
+            .y = TEXT2_Y,
+            .w = strWText2 * CHAR_W,
+            .h = LINE_HEIGHT * (newlinesText2 + 1),
+        };
         fnt_setTextColor(font, (int)((time + 100)*0.8) % 255, time % 100, time %255, time %10 + 200);
-        fnt_drawText(font, renderer, 200, 330, "TEST");
+        fnt_drawText(font, renderer, TEXT2_X, TEXT2_Y, TEXT2);
+        SDL_RenderDrawRect(renderer, &destRect);
         SDL_RenderPresent(renderer);
         time++;
         SDL_Delay(16);
