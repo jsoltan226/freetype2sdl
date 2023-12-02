@@ -58,6 +58,10 @@ int max(int a, int b);
 
 int main(int argc, char **argv)
 {
+    printf("Keys 1, 2 and 3 will toggle the displaying of their respective 'hitbox' outlines,\n"
+        "W, S, A, D will move the whole thing,\n"
+        "and the arrow keys will change the font sizes.\n");
+
     strncpy(FONT_PATH, LIBERATION_MONO, FNT_TEXT_BUFFER_SIZE - 1);
     if(argc == 2){
         switch(argv[1][0]){

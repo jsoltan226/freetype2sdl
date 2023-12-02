@@ -28,7 +28,7 @@ make compile -C "$CGD_DIR" -j$(nproc --all) || error "Compilation failed." 3
 
 # Create the .a archive
 echo ">> Archiving"
-printf "AR 	%-20s %-20s\n" "$LIB_NAME" "<= $object_files"
+printf "AR 	%-20s %-20s\n" "lib/$LIB_NAME" "<= $object_files"
 ar rvcs "$FT2SDL_DIR/lib/$LIB_NAME" $object_files ||
     error "Failed to create the library archive." 4
 
