@@ -1,5 +1,5 @@
 #include "fonts.h"
-#include "freetype/freetype.h"
+#include <cgd/user-input/keyboard.h>
 #include <SDL2/SDL_blendmode.h>
 #include <SDL2/SDL_error.h>
 #include <SDL2/SDL_events.h>
@@ -16,21 +16,29 @@
 #define WINDOW_TITLE    "FreeType 2 SDL"
 #define WINDOW_X        SDL_WINDOWPOS_CENTERED
 #define WINDOW_Y        SDL_WINDOWPOS_CENTERED
-#define WINDOW_WIDTH    500
-#define WINDOW_HEIGHT   500
+#define WINDOW_WIDTH    600
+#define WINDOW_HEIGHT   600
 #define WINDOW_FLAGS    SDL_WINDOW_OPENGL
 
 #define RENDERER_FLAGS  (SDL_RENDERER_ACCELERATED|SDL_RENDERER_PRESENTVSYNC|SDL_RENDERER_TARGETTEXTURE)
 
+#define KEYBOARD_N_KEYS 7
+
 #define LINE_HEIGHT     100.f
 #define CHAR_W          50.f
 
-#define TEXT1           "Test\n12\t4,+_"
+#define TEXT1           "Test\t*\n12\t4,+_"
 #define TEXT1_X         0
 #define TEXT1_Y         0
-#define TEXT2           "TEST"
+#define TEXT2           "TES\tT"
 #define TEXT2_X         200
 #define TEXT2_Y         330
+#define TEXT3           "1234567890"
+#define TEXT3_X         0
+#define TEXT3_Y         (WINDOW_HEIGHT - LINE_HEIGHT - 1)
+
+#define MOVEMENT_SPEED  3
+#define RESIZE_SPEED    1
 
 #define SOURCE_CODE_PRO "assets/SourceCodePro-Regular.otf"
 #define LIBERATION_MONO "assets/LiberationMono-Regular.ttf" 
@@ -39,6 +47,14 @@
 #define M_SQRT2	1.41421356237309504880	/* sqrt(2) */
 char FONT_PATH[FNT_TEXT_BUFFER_SIZE];
 
+kb_Keyboard *keyboard;
+
+int time = 0;
+bool running = true;
+bool displayTextRects = true, displayCharRects = true, displayGlyphRects = true;
+fnt_Vector2D textOffset = { .x = 0, .y = 0 };
+
+int max(int a, int b);
 
 int main(int argc, char **argv)
 {
@@ -64,106 +80,73 @@ int main(int argc, char **argv)
     SDL_Renderer *renderer = SDL_CreateRenderer(window, 0, RENDERER_FLAGS);
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    fnt_Font *font = fnt_initFont(FONT_PATH, renderer, CHAR_W, LINE_HEIGHT, FNT_CHARSET_ASCII);
+    fnt_Font *font = fnt_initFont(FONT_PATH, renderer, CHAR_W, LINE_HEIGHT, FNT_CHARSET_ASCII, 
+            FNT_FLAG_DISPLAY_GLYPH_RECTS | FNT_FLAG_DISPLAY_CHAR_RECTS | FNT_FLAG_DISPLAT_TEXT_RECTS);
     assert(font != NULL);
 
-    int time = 0;
-    bool running = true;
-    bool keyI = false, keyD = false;
-
-    int newlinesText1 = 0, newlinesText2 = 0, strWText1 = 0, strWText2 = 0;
-    char *text1 = TEXT1;
-    char *text2 = TEXT2;
-
-    int currentTextW = 0;
-    int i = 0;
-    while(text1[i]){
-        i++;
-        currentTextW++;
-        if(text1[i] == '\n'){
-            newlinesText1++;
-            strWText1 = currentTextW > strWText1 ? currentTextW : strWText1;
-            currentTextW = 0;
-        } else if(text1[i] == '\t'){
-            currentTextW += i - (i % FNT_DEFAULT_TAB_WIDTH);
-        }
-    }
-    strWText1 = currentTextW > strWText1 ? currentTextW : strWText1;
-
-    currentTextW = 0;
-    i = 0;
-    while(text2[i]){
-        i++;
-        currentTextW++;
-        if(text2[i] == '\n'){
-            newlinesText2++;
-            strWText2 = currentTextW > strWText2 ? currentTextW : strWText2;
-            currentTextW = 0;
-        } else if(text2[i] == '\t'){
-            currentTextW += i - (i % FNT_DEFAULT_TAB_WIDTH);
-        }
-    }
-    strWText2 = currentTextW > strWText2 ? currentTextW : strWText2;
+    keyboard = kb_initKeyboard();
+    assert(keyboard != NULL);
 
     while(running){
+
         SDL_Event event;
 
+        kb_updateKeyboard(keyboard);
         while(SDL_PollEvent(&event)){
             if(event.type == SDL_QUIT){
                 running = 0;
-                goto breakout;
-            } else if(event.type == SDL_KEYDOWN){
-                if(event.key.keysym.sym == SDLK_i){
-                    keyI = true;
-                } else if(event.key.keysym.sym == SDLK_d) {
-                    keyD = true;
-                }
-            } else if(event.type == SDL_KEYUP){
-                if(event.key.keysym.sym == SDLK_i){
-                    keyI = false;
-                } else if(event.key.keysym.sym == SDLK_d) {
-                    keyD = false;
-                }
             }
         }
+        if(kb_getKey(keyboard, KB_KEYCODE_W)->pressed)
+            textOffset.y -= MOVEMENT_SPEED;
+        if(kb_getKey(keyboard, KB_KEYCODE_S)->pressed)
+            textOffset.y += MOVEMENT_SPEED;
+        if(kb_getKey(keyboard, KB_KEYCODE_A)->pressed)
+            textOffset.x -= MOVEMENT_SPEED;
+        if(kb_getKey(keyboard, KB_KEYCODE_D)->pressed)
+            textOffset.x += MOVEMENT_SPEED;
+
+        if(kb_getKey(keyboard, KB_KEYCODE_ARROWUP)->pressed)
+            font->lineHeight -= RESIZE_SPEED * (LINE_HEIGHT / CHAR_W);
+        if(kb_getKey(keyboard, KB_KEYCODE_ARROWDOWN)->pressed)
+            font->lineHeight += RESIZE_SPEED * (LINE_HEIGHT / CHAR_W);
+        if(kb_getKey(keyboard, KB_KEYCODE_ARROWLEFT)->pressed)
+            font->charW -= RESIZE_SPEED;
+        if(kb_getKey(keyboard, KB_KEYCODE_ARROWRIGHT)->pressed)
+            font->charW += RESIZE_SPEED;
+
+        if(kb_getKey(keyboard, KB_KEYCODE_DIGIT1)->down)
+            font->flags ^= FNT_FLAG_DISPLAY_GLYPH_RECTS;
+
+        if(kb_getKey(keyboard, KB_KEYCODE_DIGIT2)->down)
+            font->flags ^= FNT_FLAG_DISPLAY_CHAR_RECTS;
+
+        if(kb_getKey(keyboard, KB_KEYCODE_DIGIT3)->down)
+            font->flags ^= FNT_FLAG_DISPLAT_TEXT_RECTS;
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderClear(renderer);
+
+        fnt_Vector2D textPos;
         fnt_setTextColor(font, 128, 128, time/25 % 255, 255);
-        if(time % 100){
-            if(keyI)
-                font->lineHeight++;
-            if(keyD)
-                font->lineHeight--;
-        }
+        textPos = (fnt_Vector2D){ .x = TEXT1_X + textOffset.x, .y = TEXT1_Y + textOffset.y };
+        fnt_drawText(font, renderer, &textPos, TEXT1);
 
-        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
-        SDL_Rect destRect = {
-            .x = TEXT1_X,
-            .y = TEXT1_Y,
-            .w = strWText1 * CHAR_W,
-            .h = LINE_HEIGHT * (newlinesText1 + 1),
-        };
-        fnt_drawText(font, renderer, TEXT1_X, TEXT1_Y, TEXT1);
-        SDL_RenderDrawRect(renderer, &destRect);
-
-        destRect = (SDL_Rect){
-            .x = TEXT2_X,
-            .y = TEXT2_Y,
-            .w = strWText2 * CHAR_W,
-            .h = LINE_HEIGHT * (newlinesText2 + 1),
-        };
         fnt_setTextColor(font, (int)((time + 100)*0.8) % 255, time % 100, time %255, time %10 + 200);
-        fnt_drawText(font, renderer, TEXT2_X, TEXT2_Y, TEXT2);
-        SDL_RenderDrawRect(renderer, &destRect);
+        textPos = (fnt_Vector2D){ .x = TEXT2_X + textOffset.x, .y = TEXT2_Y + textOffset.y };
+        fnt_drawText(font, renderer, &textPos, TEXT2);
+
+        fnt_setTextColor(font, 255, 255, 255, 128);
+        textPos = (fnt_Vector2D){ .x = TEXT3_X + textOffset.x, .y = TEXT3_Y + textOffset.y };
+        fnt_drawText(font, renderer, &textPos, TEXT3);
+
         SDL_RenderPresent(renderer);
         time++;
         SDL_Delay(16);
-
-breakout: continue;
     }
 
     fnt_destroyFont(font);
+    kb_destroyKeyboard(keyboard);
 
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

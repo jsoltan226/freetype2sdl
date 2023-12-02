@@ -1,9 +1,9 @@
+CGD_DIR?=../cgd
+
 CC?=clang
-COMMON_CFLAGS=-Wall -fPIC -I/usr/include/freetype2
+COMMON_CFLAGS=-Wall -fPIC -I/usr/include/freetype2 -Iinclude
 DEPFLAGS?=-MMD -MP
 CCLD?=$(CC)
-LDFLAGS?=-pie
-LIBS?=-lSDL2 -lfreetype
 STRIP?=strip
 STRIPFLAGS?=-g -s
 
@@ -19,6 +19,11 @@ EXEPREFIX =
 EXESUFFIX =
 OBJDIR = obj
 BINDIR = bin
+LIBDIR = lib
+STATIC_LIBS=$(LIBDIR)/libcgdengine_user-input.a
+SHARED_LIBS=$(wildcard $(LIBDIR)/*.so)
+LIBS?=-lSDL2 -lfreetype $(STATIC_LIBS) $(SHARED_LIBS)
+LDFLAGS?=-pie -L$(LIBDIR)
 SRCS=$(wildcard */*.c) $(wildcard ./*.c)
 OBJS=$(patsubst %,$(OBJDIR)/%.o,$(shell find . -name "*.c" | xargs basename -as .c))
 DEPS=$(patsubst %.o,%.d,$(OBJS))
@@ -36,8 +41,8 @@ release: clean $(OBJDIR) $(BINDIR) compile link strip mostlyclean test
 
 br: all run
 
-link: $(OBJS)
-	@$(PRINTF) "CCLD 	%-20s %-20s\n" "$(EXE)" "<= $^"
+link: $(OBJS) $(LIBS)
+	@$(PRINTF) "CCLD 	%-20s %-20s\n" "$(EXE)" "<= $^ $(LIBS)"
 	@$(CCLD) $(LDFLAGS) -o $(EXE) $(OBJS) $(LIBS)
 
 compile: $(OBJS)
@@ -49,6 +54,11 @@ $(OBJDIR):
 $(BINDIR):
 	@$(ECHO) "MKDIR	$(BINDIR)"
 	@$(MKDIR) $(BINDIR)
+
+$(LIBS): $(STATIC_LIBS) $(SHARED_LIBS)
+$(STATIC_LIBS):
+	@$(ECHO) "EXEC compile-cgd-userinput-lib.sh"
+	./compile-cgd-userinput-lib.sh $(CGD_DIR)
 
 $(OBJDIR)/%.o: ./%.c Makefile
 	@$(PRINTF) "CC 	%-20s %-20s\n" "$@" "<= $<"
@@ -67,9 +77,10 @@ mostlyclean:
 	@$(RM) $(OBJS) $(DEPS)
 
 clean:
-	@$(ECHO) "RM	$(OBJS) $(DEPS) $(EXE)"
-	@$(RM) $(OBJS) $(DEPS) $(EXE)
+	@$(ECHO) "RM	$(OBJS) $(DEPS) $(EXE) $(STATIC_LIBS)"
+	@$(RM) $(OBJS) $(DEPS) $(EXE) $(STATIC_LIBS)
 
+run: LD_LIBRARY_PATH=$(LIBDIR)
 run: $(EXE)
 	@$(ECHO) "EXEC	$(EXE)"
 	@$(EXEC) $(EXE)
