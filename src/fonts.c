@@ -142,14 +142,17 @@ fnt_Font *fnt_initFont(const char *filePath, SDL_Renderer *renderer, fnt_float c
         if(m->horiAdvance != 0)
             currentGlyph->scaleX = (float)m->width / m->horiAdvance;
 
-        if(lineH != 0)
+        if((float)((int)lineH << 6) != 0)
             currentGlyph->scaleY = (float)m->height / (float)((int)lineH << 6);
 
-        if(m->width != 0)
-            currentGlyph->offsetX = ((m->horiBearingX / m->horiAdvance) >> 6) * currentGlyph->scaleX;
+        if(m->horiAdvance != 0)
+            currentGlyph->offsetX = (float)m->horiBearingX / m->horiAdvance * currentGlyph->scaleX;
 
-        if(m->height != 0)
-            currentGlyph->offsetY = 1+0 * currentGlyph->scaleY;
+        /* It took me 5 days to come up with this one line, 
+         * so I don't think you should bother trying to understand it yourself.
+         * You (probably) have the luxury to only need to know, WHAT this does, not HOW... */
+        if(lineH != 0)
+            currentGlyph->offsetY = 1.f - ((float)m->horiBearingY + face->ascender) / (float)((int)lineH << 6);
 
         /* The font's texture will be a long (horizontal) line
          * with all the character placed one after the other,
@@ -342,7 +345,7 @@ void fnt_drawText(fnt_Font *fnt, SDL_Renderer *renderer, fnt_Vector2D *pos, cons
 
                     SDL_Rect glyphDestRect = { 
                         .x = pos->x + penX + (currentGlyph->offsetX * fnt->charW),
-                        .y = pos->y + penY + (0*currentGlyph->offsetY * fnt->lineHeight),
+                        .y = pos->y + penY + (currentGlyph->offsetY * fnt->lineHeight),
                         .w = (int)(fnt->charW * currentGlyph->scaleX),
                         .h = (int)(fnt->lineHeight * currentGlyph->scaleY),
                     };
